@@ -7,15 +7,12 @@ export interface ExtractionResult {
   entity_impersonated: string | null;
   agent_name: string | null;
   badge_number: string | null;
-  inbound_number: string | null;
   callback_number: string | null;
   payment_methods: { type: string; brand: string; amount_requested: number | null }[];
   crypto_wallets: string[];
   bank_details: string[];
   email_addresses: string[];
   websites_mentioned: string[];
-  script_stages: string[];
-  bot_detection_attempts: boolean;
   intel_quality: "high" | "medium" | "low" | null;
   confidence: number;
   key_quotes: string[];
@@ -30,8 +27,7 @@ const EXTRACT_INTEL_TOOL: Anthropic.Tool = {
     properties: {
       scam_type: {
         type: "string",
-        description:
-          "The type of scam (e.g. IRS impersonation, tech support, Social Security, romance, etc.)",
+        description: "The type of scam (e.g. IRS impersonation, tech support, Social Security, romance, etc.)",
       },
       entity_impersonated: {
         type: "string",
@@ -44,10 +40,6 @@ const EXTRACT_INTEL_TOOL: Anthropic.Tool = {
       badge_number: {
         type: "string",
         description: "Any badge or ID number the scammer provided",
-      },
-      inbound_number: {
-        type: "string",
-        description: "The phone number the call came from",
       },
       callback_number: {
         type: "string",
@@ -86,21 +78,10 @@ const EXTRACT_INTEL_TOOL: Anthropic.Tool = {
         items: { type: "string" },
         description: "Any websites or URLs mentioned",
       },
-      script_stages: {
-        type: "array",
-        items: { type: "string" },
-        description:
-          "The stages of the scam script observed (e.g. hook, fear_escalation, payment_instruction, isolation)",
-      },
-      bot_detection_attempts: {
-        type: "boolean",
-        description: "Whether the scammer attempted to detect if they were talking to a bot",
-      },
       intel_quality: {
         type: "string",
         enum: ["high", "medium", "low"],
-        description:
-          "Overall quality of intel extracted: high = multiple actionable fields, medium = some useful data, low = minimal or no actionable data",
+        description: "Overall quality of intel extracted: high = multiple actionable fields, medium = some useful data, low = minimal or no actionable data",
       },
       confidence: {
         type: "number",
@@ -109,8 +90,7 @@ const EXTRACT_INTEL_TOOL: Anthropic.Tool = {
       key_quotes: {
         type: "array",
         items: { type: "string" },
-        description:
-          "Verbatim quotes from the scammer that are notable — threats, payment instructions, isolation tactics, impersonation claims",
+        description: "Verbatim quotes from the scammer that are notable — threats, payment instructions, isolation tactics, impersonation claims",
       },
     },
     required: [
@@ -120,8 +100,6 @@ const EXTRACT_INTEL_TOOL: Anthropic.Tool = {
       "bank_details",
       "email_addresses",
       "websites_mentioned",
-      "script_stages",
-      "bot_detection_attempts",
       "intel_quality",
       "confidence",
       "key_quotes",
@@ -134,22 +112,18 @@ const FALLBACK_RESULT: ExtractionResult = {
   entity_impersonated: null,
   agent_name: null,
   badge_number: null,
-  inbound_number: null,
   callback_number: null,
   payment_methods: [],
   crypto_wallets: [],
   bank_details: [],
   email_addresses: [],
   websites_mentioned: [],
-  script_stages: [],
-  bot_detection_attempts: false,
   intel_quality: null,
   confidence: 0,
   key_quotes: [],
 };
 
 export async function extractIntel(transcript: string): Promise<ExtractionResult> {
-  // Handle very short transcripts
   const turnCount = transcript.split("\n").filter((line) => line.trim().length > 0).length;
 
   if (turnCount < 2) {
@@ -183,7 +157,6 @@ ${transcript}`,
 
     const result = toolUseBlock.input as ExtractionResult;
 
-    // Override quality for very short transcripts
     if (turnCount <= 3) {
       result.intel_quality = "low";
       result.confidence = Math.min(result.confidence, 0.4);

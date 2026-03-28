@@ -251,6 +251,5 @@ export async function generateReport(
     sections: [{ children: sections }],
   });
 
-  const buffer = await Packer.toBuffer(doc);
-  return Buffer.from(buffer);
+  return Buffer.from(await Packer.toBuffer(doc));
 }

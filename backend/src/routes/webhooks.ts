@@ -16,9 +16,6 @@ function isSystemMessage(entry: any): boolean {
 export async function handleWebhook(payload: any): Promise<{ status: number; body: any }> {
   const supabase = getSupabase();
 
-  // Log raw payload for debugging
-  console.log("Webhook received:", JSON.stringify(payload).substring(0, 500));
-
   if (payload?.message?.type !== "end-of-call-report") {
     return { status: 200, body: { status: "ignored" } };
   }
@@ -100,7 +97,6 @@ export async function handleWebhook(payload: any): Promise<{ status: number; bod
       if (result.entity_impersonated) items.push({ call_id: callId, field_type: "entity_impersonated", value: result.entity_impersonated, metadata: null, confidence: conf, flagged_high_value: true });
       if (result.agent_name) items.push({ call_id: callId, field_type: "agent_name", value: result.agent_name, metadata: null, confidence: conf, flagged_high_value: false });
       if (result.badge_number) items.push({ call_id: callId, field_type: "badge_number", value: result.badge_number, metadata: null, confidence: conf, flagged_high_value: false });
-      if (result.inbound_number) items.push({ call_id: callId, field_type: "phone", value: result.inbound_number, metadata: null, confidence: conf, flagged_high_value: true });
       if (result.callback_number) items.push({ call_id: callId, field_type: "callback_number", value: result.callback_number, metadata: null, confidence: conf, flagged_high_value: true });
       for (const pm of result.payment_methods) items.push({ call_id: callId, field_type: "gift_card", value: `${pm.brand || pm.type}${pm.amount_requested ? ` $${pm.amount_requested}` : ""}`, metadata: pm as any, confidence: conf, flagged_high_value: true });
       for (const w of result.crypto_wallets) items.push({ call_id: callId, field_type: "wallet", value: w, metadata: null, confidence: conf, flagged_high_value: true });

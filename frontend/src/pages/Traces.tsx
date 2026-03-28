@@ -13,21 +13,6 @@ export default function Traces() {
   const [loading, setLoading] = useState(true);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Load calls on mount
-  useEffect(() => {
-    fetchCalls().then((data) => {
-      setCalls(data);
-      setLoading(false);
-
-      // Auto-open panel from URL param
-      const callId = searchParams.get("call");
-      if (callId) {
-        const match = data.find((c) => c.id === callId);
-        if (match) selectCall(match);
-      }
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
   const selectCall = useCallback(async (call: Call) => {
     setSelectedCall(call);
     setSearchParams({ call: call.id }, { replace: true });
@@ -39,6 +24,19 @@ export default function Traces() {
     setTranscripts(t);
     setIntelItems(i);
   }, [setSearchParams]);
+
+  useEffect(() => {
+    fetchCalls().then((data) => {
+      setCalls(data);
+      setLoading(false);
+
+      const callId = searchParams.get("call");
+      if (callId) {
+        const match = data.find((c) => c.id === callId);
+        if (match) selectCall(match);
+      }
+    });
+  }, [searchParams, selectCall]);
 
   const closePanel = useCallback(() => {
     setSelectedCall(null);

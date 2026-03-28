@@ -1,52 +1,36 @@
-import { Hono } from "hono";
-import { supabase } from "../supabase.js";
+import { createClient } from "@supabase/supabase-js";
 import { generateReport } from "../services/report-generator.js";
 
-const reports = new Hono();
+function getSupabase() {
+  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+}
 
-reports.get("/calls/:id/report", async (c) => {
-  const callId = c.req.param("id");
+export async function handleReport(callId: string): Promise<{ status: number; headers?: Record<string, string>; body: any; buffer?: Buffer }> {
+  const supabase = getSupabase();
 
-  // Fetch call with persona name
   const { data: call, error: callError } = await supabase
-    .from("calls")
-    .select("*, personas(name)")
-    .eq("id", callId)
-    .single();
+    .from("calls").select("*, personas(name)").eq("id", callId).single();
 
   if (callError || !call) {
-    return c.json({ error: "Call not found" }, 404);
+    return { status: 404, body: { error: "Call not found" } };
   }
 
-  // Fetch transcripts
   const { data: transcripts } = await supabase
-    .from("transcripts")
-    .select("*")
-    .eq("call_id", callId)
-    .order("turn_index", { ascending: true });
+    .from("transcripts").select("*").eq("call_id", callId).order("turn_index", { ascending: true });
 
-  // Fetch intel items
   const { data: intelItems } = await supabase
-    .from("intel_items")
-    .select("*")
-    .eq("call_id", callId);
+    .from("intel_items").select("*").eq("call_id", callId);
 
   const personaName = (call.personas as any)?.name || "Unknown Persona";
+  const buffer = await generateReport(call, transcripts || [], intelItems || [], personaName);
 
-  const buffer = await generateReport(
-    call,
-    transcripts || [],
-    intelItems || [],
-    personaName
-  );
-
-  return new Response(new Uint8Array(buffer), {
+  return {
+    status: 200,
     headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="mella-report-${callId}.docx"`,
     },
-  });
-});
-
-export default reports;
+    body: null,
+    buffer,
+  };
+}
